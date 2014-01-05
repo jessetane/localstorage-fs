@@ -19,7 +19,7 @@ same as in node but a bunch of methods are not implemented yet, view the [source
 * `process.chdir`, `process.cwd` and `process.umask` are shimmed by this module for now
 
 ## example
-there is a *very* simple example: do `npm run exemplify` and then open the html file in your browser and check your console
+there is a *very* simple example: do `npm run exemplify` then open example/index.html in your browser console
 
 ## test
 no tests yet - maybe node's fs tests would work?
