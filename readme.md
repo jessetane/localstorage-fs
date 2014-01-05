@@ -1,8 +1,8 @@
 # localstorage-fs
-node's [`fs`](http://http://nodejs.org/api/fs.html) module backed by [`localStorage`](http://www.w3.org/TR/webstorage/#the-localstorage-attribute)
+node's [`fs`](http://nodejs.org/api/fs.html) module backed by [`localStorage`](http://www.w3.org/TR/webstorage/#the-localstorage-attribute)
 
 ## why
-[this](https://github.com/juliangruber/level-fs-browser) would be way better, but i need the sync methods to implement `require`
+[this](https://github.com/juliangruber/level-fs-browser) would be way better, but i needed the sync methods
 
 ## how
 browserify and use like you would in node land
