@@ -1,28 +1,30 @@
 # localstorage-fs
-node's fs module for the browser backed by [localStorage](http://www.w3.org/TR/webstorage/#the-localstorage-attribute)
+node's [`fs`](http://http://nodejs.org/api/fs.html) module backed by [`localStorage`](http://www.w3.org/TR/webstorage/#the-localstorage-attribute)
 
 ## why
-there is [this](https://github.com/juliangruber/level-fs-browser), but i needed sync methods
+[this](https://github.com/juliangruber/level-fs-browser) would be way better, but i need the sync methods to implement `require`
 
 ## how
-browserify and use it like you would in node land
+browserify and use like you would in node land
 
 ## api
-same as in node but a bunch of methods are not implemented yet, view the [source](https://github.com/jessetane/localstorage-fs/blob/master/index.js#L203)
-
-## implementation details
-* file data and file metadata are stored under two prefixes: 'file://' and 'file-meta://' respectively
-* raw file data is stored as base64 encoded strings under the file:// prefix
-* directory listings are indexed as comma separated lists of file names under the file:// prefix
-* stats are indexed under the file-meta:// prefix
-* `fs.WriteStream` and `fs.ReadStream` are unavailable until you call `fs.create[Read|Write]Stream`
-* `process.chdir`, `process.cwd` and `process.umask` are shimmed by this module for now
+the highest level methods are supported, though many others could probably be implemented: here is a [list](https://github.com/jessetane/localstorage-fs/blob/master/index.js#L203)
 
 ## example
-there is a *very* simple example: do `npm run exemplify` then open example/index.html in your browser console
+a very simple example: do `npm run exemplify`, then open example/index.html in your browser and inspect. `window.fs` should be defined so you can play around in the console
 
 ## test
-no tests yet - maybe node's fs tests would work?
+todo
+
+## implementation
+* file data and directory listings are keyed by `'/path/name'` under the prefix: `'file://'`
+* meta data (also keyed by path name) is stored as JSON stringified `fs.Stats` instances under `'file-meta://'`
+* file contents are stored as base64 encoded strings which means binary files work
+* directory listings are stored as newline delimited plain strings (like `ls(1)`)
+
+## caveat
+* `fs.WriteStream` and `fs.ReadStream` are unavailable until you call `fs.create[Read|Write]Stream()` at least 1x
+* some fs related [`process`](https://github.com/jessetane/localstorage-fs/blob/master/index.js#L441) methods are shimmed out by this module for now
 
 ## license
 WTFPL
