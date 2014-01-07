@@ -4,6 +4,7 @@ var pathutil = require('path');
 var constants = require('constants');
 var Stats = require('fs-stats');
 var inherits = require('inherits');
+var mountpoint = process.env.FS_MOUNT_POINT || 'file';
 
 var fs = module.exports = {
   Stats: Stats,
@@ -34,13 +35,13 @@ fs.renameSync = function(oldPath, newPath) {
     }
   }
   
-  var oldData = localStorage.getItem('file://' + oldPath);
-  localStorage.setItem('file://' + oldPath, oldData);
-  localStorage.removeItem('file://' + oldPath);
+  var oldData = localStorage.getItem(mountpoint + '://' + oldPath);
+  localStorage.setItem(mountpoint + '://' + oldPath, oldData);
+  localStorage.removeItem(mountpoint + '://' + oldPath);
   
-  var oldMeta = localStorage.getItem('file-meta://' + oldPath);
-  localStorage.setItem('file-meta://' + oldPath, oldMeta);
-  localStorage.removeItem('file-meta://' + oldPath);
+  var oldMeta = localStorage.getItem(mountpoint + '-meta://' + oldPath);
+  localStorage.setItem(mountpoint + '-meta://' + oldPath, oldMeta);
+  localStorage.removeItem(mountpoint + '-meta://' + oldPath);
 };
 fs.rename = trySync(fs.renameSync);
 
@@ -53,7 +54,7 @@ fs.truncateSync = function(path, len) {
   
   len = len || 0;
   
-  var buf = Buffer(localStorage.getItem('file://' + path), 'base64');
+  var buf = Buffer(localStorage.getItem(mountpoint + '://' + path), 'base64');
   fs.writeFileSync(path, buf.slice(0, len));
 };
 fs.truncate = trySync(fs.truncateSync);
@@ -65,13 +66,13 @@ fs.chmodSync = function(path, mode) {
   var unmasked = stats.mode & ~permissionsMask;
   stats.mode = unmasked | modeNum(mode);
   
-  localStorage.setItem('file-meta://' + path, JSON.stringify(stats));
+  localStorage.setItem(mountpoint + '-meta://' + path, JSON.stringify(stats));
 };
 fs.chmod = trySync(fs.chmodSync);
 
 fs.statSync = function(path) {
   path = normalizePath(path);
-  var data = localStorage.getItem('file-meta://' + path);
+  var data = localStorage.getItem(mountpoint + '-meta://' + path);
   if (data === null) {
     error('ENOENT', "no such file or directory '" + path + "'");
   }
@@ -92,8 +93,8 @@ fs.unlinkSync = function(path) {
     error('EPERM', "operation not permitted '" + path + "'");
   }
   
-  localStorage.removeItem('file://' + path);
-  localStorage.removeItem('file-meta://' + path);
+  localStorage.removeItem(mountpoint + '://' + path);
+  localStorage.removeItem(mountpoint + '-meta://' + path);
   
   removeDirectoryListing(path);
 };
@@ -106,8 +107,8 @@ fs.rmdirSync = function(path) {
     error('ENOTEMPTY', "directory not empty '" + path + "'");
   }
   
-  localStorage.removeItem('file://' + path);
-  localStorage.removeItem('file-meta://' + path);
+  localStorage.removeItem(mountpoint + '://' + path);
+  localStorage.removeItem(mountpoint + '-meta://' + path);
   
   removeDirectoryListing(path);
 };
@@ -115,7 +116,7 @@ fs.rmdir = trySync(fs.rmdirSync);
 
 fs.mkdirSync = function(path, mode) {
   path = normalizePath(path);
-  if (localStorage.getItem('file://' + path) !== null) {
+  if (localStorage.getItem(mountpoint + '://' + path) !== null) {
     error('EEXIST', "file already exists '" + path + "'");
   }
   
@@ -127,9 +128,9 @@ fs.mkdirSync = function(path, mode) {
   mode = mode === undefined ? 0777 : modeNum(mode);
   mode = mode & ~process.umask();
   stats = { mode: mode | constants.S_IFDIR };
-  localStorage.setItem('file-meta://' + path, JSON.stringify(stats));
+  localStorage.setItem(mountpoint + '-meta://' + path, JSON.stringify(stats));
   
-  localStorage.setItem('file://' + path, '');
+  localStorage.setItem(mountpoint + '://' + path, '');
   
   addDirectoryListing(path);
 };
@@ -142,7 +143,7 @@ fs.readdirSync = function(path) {
     error('ENOTDIR', "not a directory '" + path + "'");
   }
   
-  var ls = localStorage.getItem('file://' + path);
+  var ls = localStorage.getItem(mountpoint + '://' + path);
   if (ls) return ls.split('\n');
   return [];
 };
@@ -176,7 +177,7 @@ fs.readFileSync = function(path, options) {
   
   openFile(path, stats, opts);
   
-  var buf = Buffer(localStorage.getItem('file://' + path), 'base64');
+  var buf = Buffer(localStorage.getItem(mountpoint + '://' + path), 'base64');
   if (opts.encoding) return buf.toString(opts.encoding);
   return buf;
 };
@@ -212,10 +213,10 @@ fs.writeFileSync = function(path, data, options) {
   
   if (!Buffer.isBuffer(data)) data = Buffer(data, opts.encoding);
   if (stats && opts.flag.match(/^a/)) {
-    var prepend = Buffer(localStorage.getItem('file://' + path), 'base64');
+    var prepend = Buffer(localStorage.getItem(mountpoint + '://' + path), 'base64');
     data = Buffer.concat([ prepend, data ]);
   }
-  localStorage.setItem('file://' + path, data.toString('base64'));
+  localStorage.setItem(mountpoint + '://' + path, data.toString('base64'));
   
   addDirectoryListing(path);
 };
@@ -230,7 +231,7 @@ fs.appendFile = trySync(fs.appendFileSync);
 
 fs.existsSync = function(path) {
   path = normalizePath(path);
-  return localStorage.getItem('file://' + path) !== null;
+  return localStorage.getItem(mountpoint + '://' + path) !== null;
 };
 fs.exists = trySync(fs.existsSync, false);
 
@@ -398,10 +399,10 @@ function normalizePath(path) {
 }
 
 function mount() {
-  if (localStorage.getItem('file:///') === null) {
+  if (localStorage.getItem(mountpoint + ':///') === null) {
     var mode = 0777 & ~process.umask();
-    localStorage.setItem('file-meta:///', JSON.stringify({ mode: mode | constants.S_IFDIR }));
-    localStorage.setItem('file:///', '');
+    localStorage.setItem(mountpoint + '-meta:///', JSON.stringify({ mode: mode | constants.S_IFDIR }));
+    localStorage.setItem(mountpoint + ':///', '');
   }
   mounted = true;
 }
@@ -457,8 +458,8 @@ function openFile(path, stats, options, write) {
   if (!stats) {
     var mode = options.mode & ~process.umask();
     stats = { mode: mode | constants.S_IFREG };
-    localStorage.setItem('file://' + path, '');
-    localStorage.setItem('file-meta://' + path, JSON.stringify(stats));
+    localStorage.setItem(mountpoint + '://' + path, '');
+    localStorage.setItem(mountpoint + '-meta://' + path, JSON.stringify(stats));
   }
 }
 
@@ -502,7 +503,7 @@ function addDirectoryListing(path) {
   }
   if (!listed) {
     ls.push(filename);
-    localStorage.setItem('file://' + dirname, ls.join('\n'));
+    localStorage.setItem(mountpoint + '://' + dirname, ls.join('\n'));
   }
 }
 
@@ -518,7 +519,7 @@ function removeDirectoryListing(path) {
       newls.push(file);
     }
   }
-  localStorage.setItem('file://' + dirname, newls.join('\n'));
+  localStorage.setItem(mountpoint + '://' + dirname, newls.join('\n'));
 }
 
 function modeNum(mode) {

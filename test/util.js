@@ -12,10 +12,11 @@ exports.perms = function(path) {
 
 exports.reset = function() {
   for (var key in localStorage) {
-    if (key === 'file:///') {
+    if (!key.match(/^testfs/)) continue;
+    if (key === 'testfs:///') {
       localStorage.setItem(key, '');
     }
-    else if (key !== 'file-meta:///') {
+    else if (key !== 'testfs-meta:///') {
       localStorage.removeItem(key);
     }
   }

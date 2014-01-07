@@ -1,5 +1,7 @@
-var fs = require('../');
 var process = global.process || require('process');
+process.env.FS_MOUNT_POINT = 'testfs';
+
+var fs = require('../');
 process.umask(0);
 
 var util = require('./util');
