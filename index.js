@@ -211,8 +211,11 @@ fs.writeFileSync = function(path, data, options) {
   openFile(path, stats, opts, true);
   
   if (!Buffer.isBuffer(data)) data = Buffer(data, opts.encoding);
-  var prepend = stats && opts.flag.match(/^a/) ? localStorage.getItem('file://' + path) : '';
-  localStorage.setItem('file://' + path, prepend + data.toString('base64'));
+  if (stats && opts.flag.match(/^a/)) {
+    var prepend = Buffer(localStorage.getItem('file://' + path), 'base64');
+    data = Buffer.concat([ prepend, data ]);
+  }
+  localStorage.setItem('file://' + path, data.toString('base64'));
   
   addDirectoryListing(path);
 };
