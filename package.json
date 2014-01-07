@@ -1,6 +1,6 @@
 {
   "name": "localstorage-fs",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "node's fs module for the browser backed by localStorage",
   "dependencies": {
     "process": "~0.5.1",
