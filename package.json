@@ -7,8 +7,22 @@
     "fs-stats": "~0.0.0",
     "inherits": "~2.0.1"
   },
+  "devDependencies": {
+    "tape": "2.3.2"
+  },
   "scripts": {
+    "test": "browserify test/index.js > test/bundle.js && { [ -x \"$(which open)\" ] && open test/index.html || xdg-open test/index.html; }",
     "exemplify": "browserify example/index.js > example/bundle.js"
+  },
+  "testling" : {
+    "files" : "test/index.js",
+    "browsers" : [
+      "ie/8", "ie/9", "ie/10", "ie/latest",
+      "chrome/15", "chrome/latest",
+      "firefox/10", "firefox/latest",
+      "safari/latest",
+      "opera/latest"
+    ]
   },
   "author": "Jesse Tane <jesse.tane@gmail.com>",
   "license": "WTFPL"
