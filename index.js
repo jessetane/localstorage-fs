@@ -11,7 +11,9 @@ var fs = module.exports = {
 };
 
 var mounted = false;
-var permissionsMask = constants.S_IRWXU | constants.S_IRWXG | constants.S_IRWXO;
+var permissionsMask = constants.S_IRWXU
+                    | constants.S_IRWXG
+                    | constants.S_IRWXO;
 
 fs.renameSync = function(oldPath, newPath) {
   oldPath = normalizePath(oldPath);
@@ -122,7 +124,7 @@ fs.mkdirSync = function(path, mode) {
     error('ENOTDIR', "not a directory '" + path + "'");
   }
   
-  mode = mode !== undefined ? mode : 0777;
+  mode = mode === undefined ? 0777 : modeNum(mode);
   mode = mode & ~process.umask();
   stats = { mode: mode | constants.S_IFDIR };
   localStorage.setItem('file-meta://' + path, JSON.stringify(stats));
@@ -148,23 +150,8 @@ fs.readdir = trySync(fs.readdirSync);
 
 fs.readFileSync = function(path, options) {
   path = normalizePath(path);
-  var stats = fs.statSync(path);
-  if (stats.isDirectory()) {
-    error('EISDIR', "illegal operation on a directory '" + path + "'");
-  }
-  
-  options = options || {};
-  options.encoding = options.encoding || 'utf8';
-  
-  return Buffer(localStorage.getItem('file://' + path), 'base64').toString(options.encoding);
-};
-fs.readFile = trySync(fs.readFileSync);
-
-fs.writeFileSync = function(path, data, options) {
-  path = normalizePath(path);
-  var stats;
   try {
-    stats = fs.statSync(path);
+    var stats = fs.statSync(path);
   } catch (err) {
     if (err.code !== 'ENOENT') {
       throw err;
@@ -175,29 +162,74 @@ fs.writeFileSync = function(path, data, options) {
   }
   
   options = options || {};
-  options.encoding = options.encoding || 'utf8';
-  
-  if (!Buffer.isBuffer(data)) data = Buffer(data, options.encoding);
-  localStorage.setItem('file://' + path, data.toString('base64'));
-  
-  var stats = localStorage.getItem('file-meta://' + path);
-  if (!stats) {
-    var mode = options.mode;
-    mode = mode !== undefined ? mode : 0666;
-    mode = mode & ~process.umask();
-    stats = { mode: mode | constants.S_IFREG };
-    localStorage.setItem('file-meta://' + path, JSON.stringify(stats));
+  if (typeof options === 'string') {
+    options = { encoding: options };
   }
+  if (typeof options !== 'object') {
+    throw new TypeError('Bad arguments');
+  }
+  var opts = {};
+  for (var k in options) opts[k] = options[k];
+  opts.flag = opts.flag || 'r';
+  opts.mode = opts.mode === undefined ? 0666
+                                      : opts.mode;
+  
+  openFile(path, stats, opts);
+  
+  var buf = Buffer(localStorage.getItem('file://' + path), 'base64');
+  if (opts.encoding) return buf.toString(opts.encoding);
+  return buf;
+};
+fs.readFile = trySync(fs.readFileSync);
+
+fs.writeFileSync = function(path, data, options) {
+  path = normalizePath(path);
+  try {
+    var stats = fs.statSync(path);
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
+  }
+  if (stats && stats.isDirectory()) {
+    error('EISDIR', "illegal operation on a directory '" + path + "'");
+  }
+  
+  options = options || {};
+  if (typeof options === 'string') {
+    options = { encoding: options };
+  }
+  else if (typeof options !== 'object') {
+    throw new TypeError('Bad arguments');
+  }
+  var opts = {};
+  for (var k in options) opts[k] = options[k];
+  opts.flag = opts.flag || 'w';
+  opts.mode = opts.mode === undefined ? 0666
+                                      : opts.mode;
+  
+  openFile(path, stats, opts, true);
+  
+  if (!Buffer.isBuffer(data)) data = Buffer(data, opts.encoding);
+  var prepend = stats && opts.flag.match(/^a/) ? localStorage.getItem('file://' + path) : '';
+  localStorage.setItem('file://' + path, prepend + data.toString('base64'));
   
   addDirectoryListing(path);
 };
 fs.writeFile = trySync(fs.writeFileSync);
 
+fs.appendFileSync = function(path, data, options) {
+  options = options || {};
+  options.flag = options.flag || 'a';
+  fs.writeFileSync(path, data, options);
+};
+fs.appendFile = trySync(fs.appendFileSync);
+
 fs.existsSync = function(path) {
   path = normalizePath(path);
   return localStorage.getItem('file://' + path) !== null;
 };
-fs.exists = trySync(fs.existsSync);
+fs.exists = trySync(fs.existsSync, false);
 
 
 // not yet implemented
@@ -259,9 +291,6 @@ fs.write = trySync(fs.writeSync);
 fs.readSync = notImplemented('read');
 fs.read = trySync(fs.readSync);
 
-fs.appendFileSync = notImplemented('appendFile');
-fs.appendFile = trySync('appendFile');
-
 fs.watchFile = notImplemented('watchFile');
 fs.unwatchFile = notImplemented('unwatchFile');
 fs.watch = notImplemented('watch');
@@ -284,55 +313,70 @@ function initStreams() {
                               : require('stream');
   
   fs.ReadStream = ReadStream;
-  fs.WriteStream = WriteStream;
   
   function ReadStream(path, options) {
     var self = this;
-    path = normalizePath(path);
-    this._buf = fs.readFileSync(path);
-
+    this._path = normalizePath(path);
+    this._options = options || {};
+    
     process.nextTick(function() {
       self.emit('open');
     });
-
+    
+    this.on('end', function() {
+      self.emit('close');
+    });
+    
     stream.Readable.call(this, options);
   }
   inherits(ReadStream, stream.Readable);
 
-  ReadStream.prototype._read = function(n) {  
+  ReadStream.prototype._read = function(n) {
+    try {
+      this._buf = this._buf || fs.readFileSync(this._path, this._options);
+    } catch (err) {
+      return this.emit('error', err);
+    }
     n = n || Infinity;
-    this.push(this._buf.slice(0, n));
+    var chunk = this._buf.slice(0, n);
+    this.push(chunk.length > 0 ? chunk : null);
     this._buf = this._buf.slice(n);
   };
+
+  fs.WriteStream = WriteStream;
 
   function WriteStream(path, options) {
     var self = this;
     this._path = normalizePath(path);
+    this._options = options || {};
+    this._firstWrite = true;
     this._buf;
-  
+    
+    this.on('finish', function() {
+      self.emit('close');
+    });
+    
     stream.Writable.call(this, options);
   }
   inherits(WriteStream, stream.Writable);
 
   WriteStream.prototype._write = function(chunk, enc, cb) {
-    if (this._ending) {
+    try {
       this.emit('open');
-      fs.writeFileSync(this._path, this._buf);
+      var action = 'appendFileSync';
+      if (this._firstWrite) {
+        this._firstWrite = false;
+        if (!this._options.flag ||
+            !this._options.flag.match(/^a/)) {
+          action = 'writeFileSync';
+        }
+      }
+      fs[action](this._path, chunk, this._options);
+    } catch (err) {
+      this.emit('error', err);
     }
-    else if (chunk) bufferChunk(this, chunk);
     cb();
   };
-
-  WriteStream.prototype.end = function(chunk, encoding, callback) {
-    if (chunk) bufferChunk(this, Buffer(chunk, encoding));
-    chunk = this._buf;
-    this._ending = true;
-    return stream.Writable.prototype.end.call(this, chunk, encoding, callback);
-  };
-
-  function bufferChunk(s, chunk) {
-    s._buf = s._buf ? Buffer.concat([ s._buf, chunk ]) : chunk;
-  }
 }
 
 
@@ -359,21 +403,83 @@ function mount() {
   mounted = true;
 }
 
-function trySync(method) {
+function openFile(path, stats, options, write) {
+  var flag = options.flag;
+  switch (flag) {
+    
+    // file must exist
+    case 'r':
+    case 'r+':
+    case 'rs':
+    case 'rs+':
+      if (!stats) {
+        error('ENOENT', "no such file or directory '" + path + "'");
+      }
+      break;
+    
+    // file must not exist
+    case 'wx':
+    case 'wx+':
+    case 'ax':
+    case 'ax+':
+      if (stats) {
+        error('EEXIST', "file already exists '" + path + "'");
+      }
+      break;
+    
+    // move along
+    case 'w':
+    case 'w+':
+    case 'a':
+    case 'a+':
+      break;
+    
+    default:
+      throw new TypeError('Unknown flag');
+  }
+  
+  if (write) {
+    if (flag.match(/^r/) &&
+        flag.match(/[^\+]$/)) {
+      error('EBADF', 'bad file descriptor');
+    }
+  }
+  else {
+    if (flag.match(/^[w|a]/) &&
+        flag.match(/[^\+]$/)) {
+      error('EBADF', 'bad file descriptor');
+    }
+  }
+  
+  if (!stats) {
+    var mode = options.mode & ~process.umask();
+    stats = { mode: mode | constants.S_IFREG };
+    localStorage.setItem('file://' + path, '');
+    localStorage.setItem('file-meta://' + path, JSON.stringify(stats));
+  }
+}
+
+function trySync(method, catchErrors) {
   return function() {
     var args = Array.prototype.slice.call(arguments);
     var syncArgs = args.slice(0, -1);
     var callback = args.slice(-1)[0];
     
     var error, retval;
-    try {
+    if (catchErrors === false) {
       retval = method.apply(fs, syncArgs);
-    } catch (err) {
-      error = err;
+    }
+    else {
+      try {
+        retval = method.apply(fs, syncArgs);
+      } catch (err) {
+        error = err;
+      }
     }
     
     process.nextTick(function() {
-      callback(error, retval);
+      if (catchErrors === false) callback(retval);
+      else callback(error, retval);
     });
   }
 }
@@ -412,16 +518,16 @@ function removeDirectoryListing(path) {
   localStorage.setItem('file://' + dirname, newls.join('\n'));
 }
 
-function modeNum(oldMode, newMode) {
-  if (typeof newMode !== 'number') {
-    if (typeof newMode === 'string') {
-      newMode = parseInt(newMode, 8);
+function modeNum(mode) {
+  if (typeof mode !== 'number') {
+    if (typeof mode === 'string') {
+      mode = parseInt(mode, 8);
     }
     else {
-      error('EPERM', newMode + ' is not a valid permission mode');
+      error('EPERM', mode + ' is not a valid permission mode');
     }
   }
-  return newMode & permissionsMask;
+  return mode & permissionsMask;
 }
 
 function notImplemented(name) {

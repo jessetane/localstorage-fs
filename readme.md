@@ -10,7 +10,7 @@ node's [`fs`](http://nodejs.org/api/fs.html) module backed by [`localStorage`](h
 browserify and use like you would in node land
 
 ## api
-the highest level methods are supported, though many others could probably be implemented: here is a [list](https://github.com/jessetane/localstorage-fs/blob/master/index.js#L203)
+the highest level methods are supported, though many others could probably be implemented: here is a [list](https://github.com/jessetane/localstorage-fs/blob/master/index.js#L235)
 
 ## example
 a very simple example: do `npm run exemplify`, then open example/index.html in your browser and inspect. `window.fs` should be defined so you can play around in the console
@@ -26,7 +26,7 @@ do `npm test` if you have bash, otherwise `browserify test/index.js -o test/bund
 
 ## caveat
 * `fs.WriteStream` and `fs.ReadStream` are unavailable until you call `fs.create[Read|Write]Stream()` at least 1x
-* some `fs` related [`process`](https://github.com/jessetane/localstorage-fs/blob/master/index.js#L441) methods are shimmed out by this module for now
+* some `fs` related [`process`](https://github.com/jessetane/localstorage-fs/blob/master/index.js#L547) methods are shimmed out by this module for now
 
 ## license
 WTFPL
