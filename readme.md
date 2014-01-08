@@ -51,6 +51,7 @@ others that could probably be implemented [here](https://github.com/jessetane/lo
 * file contents are stored as base64 encoded strings which means binary files work
 * directory listings are stored as newline delimited plain strings (like `ls(1)`)
 * async methods are faked with `process.nextTick`
+* streams are faked by buffering into memory
 
 ## notes
 * some `fs` related [`process`](https://github.com/jessetane/localstorage-fs/blob/master/index.js#L547) methods are shimmed out by this module for now
