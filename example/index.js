@@ -1,17 +1,38 @@
-window.fs = require('../');
 
-// read / write sync
-fs.writeFileSync('pt1.txt', 'Begin at the beginning, ');
-var pt1 = fs.readFileSync('pt1.txt');
+// just for the example so we get a clean disk every time
+process.env.FS_MOUNT_POINT = 'example';
+for (var k in localStorage) {
+  if (k.match(/example(-meta)?:\/\//)) {
+    localStorage.removeItem(k);
+  }
+}
 
-// write stream
-var ws = fs.createWriteStream('pt2.txt');
-ws.write('and go on ');
-ws.write('till you come to the end: ');
-ws.end('then stop');
+// the example
+var example = function() {
+  window.fs = require('../');
+  window.process = require('process');
 
-// read stream
-var rs = fs.createReadStream('pt2.txt');
-var pt2 = rs.read().toString();
+  fs.writeFileSync('hello.txt', 'the code above just ran');
+  console.log(fs.readFileSync('hello.txt', 'utf8'));
 
-console.log('"' + pt1 + pt2 + '"');
+  fs.mkdirSync('dir');
+
+  var ws = fs.createWriteStream('dir/tryme.txt');
+  ws.write('fs and process should be defined globally\n');
+  ws.end("try fs.readdirSync('.') and process.chdir('dir')");
+
+  var rs = fs.createReadStream('dir/tryme.txt');
+  console.log(rs.read().toString());
+};
+
+
+// print example source to console
+var src = example.toString();
+src = src.split('\n');
+src.pop();
+src.shift();
+src = '\n\n' + src.join('\n') + '\n\n';
+console.log('%c' + src, 'color:#0064FF');
+
+// go
+example();

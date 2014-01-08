@@ -11,8 +11,8 @@
     "tape": "2.3.2"
   },
   "scripts": {
-    "test": "browserify test/index.js > test/bundle.js && { [ -x \"$(which open)\" ] && open test/index.html || xdg-open test/index.html; }",
-    "exemplify": "browserify example/index.js > example/bundle.js"
+    "example": "browserify example/index.js > example/bundle.js && { [ -x \"$(which open)\" ] && open example/index.html || xdg-open example/index.html; }",
+    "test": "browserify test/index.js > test/bundle.js && { [ -x \"$(which open)\" ] && open test/index.html || xdg-open test/index.html; }"
   },
   "testling" : {
     "files" : "test/index.js",
