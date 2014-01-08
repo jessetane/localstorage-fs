@@ -50,6 +50,7 @@ others that could probably be implemented [here](https://github.com/jessetane/lo
 * meta data (also keyed by path name) is stored as JSON stringified `fs.Stats` instances under `'file-meta://'`
 * file contents are stored as base64 encoded strings which means binary files work
 * directory listings are stored as newline delimited plain strings (like `ls(1)`)
+* async methods are faked with `process.nextTick`
 
 ## notes
 * some `fs` related [`process`](https://github.com/jessetane/localstorage-fs/blob/master/index.js#L547) methods are shimmed out by this module for now
