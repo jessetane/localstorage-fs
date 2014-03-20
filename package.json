@@ -1,6 +1,6 @@
 {
   "name": "localstorage-fs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "node's fs module for the browser backed by localStorage",
   "dependencies": {
     "process": "~0.5.1",
@@ -17,11 +17,11 @@
   "testling" : {
     "files" : "test/index.js",
     "browsers" : [
-      "ie/8", "ie/9", "ie/10", "ie/latest",
-      "chrome/15", "chrome/latest",
-      "firefox/10", "firefox/latest",
-      "safari/latest",
-      "opera/latest"
+      "ie/8..latest",
+      "ff/24..latest",
+      "chrome/25..latest",
+      "safari/5.1..latest",
+      "opera/12..latest"
     ]
   },
   "author": "Jesse Tane <jesse.tane@gmail.com>",
